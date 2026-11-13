@@ -214,6 +214,9 @@ tempCodeRunnerFile.py
 # Marimo
 marimo/_static/
 marimo/_lsp/
+
+Eventbrite_YubiKeys.xlsx
+logs_eventbrite/
 __marimo__/
 
 # Streamlit
