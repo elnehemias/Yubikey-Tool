@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><title>YubiKey Provisioner</title>
+<style>
+  :root { --bg: #090d16; --card: #111827; --border: #1f2937; --text: #f3f4f6; --muted: #9ca3af; --green: #10b981; --indigo: #6366f1; --sky: #0ea5e9; }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+  body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .grid { max-width: 880px; width: 100%; display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 20px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); display: flex; flex-direction: column; gap: 16px; }
+  .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+  h1 { font-size: 18px; color: var(--green); } h2 { font-size: 16px; color: #818cf8; }
+  .badge { font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 600; background: rgba(239,68,68,0.15); color: #f87171; }
+  .badge.on { background: rgba(16,185,129,0.15); color: #34d399; }
+  .info { font-family: monospace; font-size: 12px; color: var(--muted); background: #0b0f19; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); }
+  input, select { width: 100%; background: #0b0f19; border: 1px solid #374151; color: var(--text); padding: 10px 12px; border-radius: 10px; font-size: 14px; outline: none; transition: 0.2s; }
+  input:focus, select:focus { border-color: var(--green); }
+  .row { display: flex; gap: 10px; }
+  button, .btn-dl { border: none; border-radius: 10px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; text-decoration: none; text-align: center; }
+  .btn-main { flex: 1; background: var(--green); color: #fff; } .btn-main:hover:not(:disabled) { background: #059669; }
+  .btn-main:disabled { background: #1f2937; color: #6b7280; cursor: not-allowed; }
+  .btn-dl { background: var(--sky); color: #fff; display: flex; align-items: center; justify-content: center; } .btn-dl:hover { background: #0284c7; }
+  .btn-ai { background: var(--indigo); color: #fff; } .btn-ai:hover { background: #4f46e5; }
+  .btn-quick { background: rgba(99,102,241,0.15); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; padding: 7px 12px; font-size: 12px; border-radius: 8px; text-align: left; }
+  .btn-quick:hover { background: rgba(99,102,241,0.3); color: #fff; }
+  .res { background: #0b0f19; border: 1px solid rgba(16,185,129,0.3); border-radius: 12px; padding: 14px; font-size: 12px; display: flex; flex-direction: column; gap: 8px; }
+  .item { display: flex; justify-content: space-between; align-items: center; background: var(--card); padding: 6px 10px; border-radius: 6px; font-family: monospace; }
+  .item b { color: #fbbf24; margin-left: 6px; }
+  .cp { background: #1f2937; color: #34d399; padding: 4px 8px; font-size: 11px; border-radius: 6px; } .cp:hover { background: #374151; }
+  .err { background: rgba(239,68,68,0.15); color: #f87171; padding: 10px; border-radius: 10px; font-size: 13px; }
+  .chat-box { flex: 1; height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 4px; }
+  .msg { padding: 10px 14px; border-radius: 12px; font-size: 13px; line-height: 1.4; max-width: 85%; white-space: pre-line; }
+  .msg.bot { background: #1f2937; align-self: flex-start; } .msg.usr { background: rgba(99,102,241,0.25); border: 1px solid rgba(99,102,241,0.4); align-self: flex-end; }
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+<div class="grid">
+  <div class="card">
+    <div class="header"><h1>Eventbrite OTP & Excel</h1><span id="badge" class="badge">Desconectada</span></div>
+    <div id="info" class="info hidden"></div>
+    <form id="f" style="display:flex;flex-direction:column;gap:12px">
+      <input id="bms" required placeholder="BMS del Agente (Ej: 4259379)">
+      <select id="slot"><option value="1">Slot 1 (Short Touch - Por defecto)</option><option value="2">Slot 2 (Long Touch - Alternativo)</option></select>
+      <div class="row">
+        <button id="btn" class="btn-main" disabled>Configurar Llave</button>
+        <a href="/download-excel" class="btn-dl">📥 Excel</a>
+      </div>
+    </form>
+    <div id="res" class="res hidden">
+      <div style="color:#34d399;font-weight:600">✔ Guardado en Excel y <span id="cPath"></span></div>
+      <div class="item"><span>Serial:<b id="oSer" style="color:#fff"></b></span><button type="button" class="cp" onclick="cp('oSer')">Copiar</button></div>
+      <div class="item"><span>Priv ID:<b id="oPriv"></b></span><button type="button" class="cp" onclick="cp('oPriv')">Copiar</button></div>
+      <div class="item"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-right:8px">Secret:<b id="oSec"></b></span><button type="button" class="cp" onclick="cp('oSec')">Copiar</button></div>
+    </div>
+    <div id="err" class="err hidden"></div>
+  </div>
+
+  <div class="card">
+    <div class="header"><h2>Agente IA</h2><input type="password" id="key" placeholder="Gemini API Key" style="width:140px;padding:6px 10px;font-size:12px"></div>
+    
+    <button type="button" class="btn-quick" onclick="sendPreset('Limpia toda la YubiKey y déjala configurada solo en modo FIDO2 sin PIN.')">
+      ⚡ Acción rápida: Limpiar y dejar en FIDO2 (sin PIN)
+    </button>
+
+    <div id="chat" class="chat-box"><div class="msg bot">Hola. Usa el botón rápido de arriba o escríbeme lo que necesites configurar.</div></div>
+    <form id="cf" class="row">
+      <input id="cin" required placeholder="Ej: Configura BMS 4259379...">
+      <button id="cbtn" class="btn-ai">Enviar</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id), cp = id => navigator.clipboard.writeText($(id).textContent); let busy = false;
+$('key').value = localStorage.getItem('g_key') || ''; $('key').onchange = () => localStorage.setItem('g_key', $('key').value);
+
+setInterval(async () => {
+  if (busy) return;
+  const r = await fetch('/status').then(x => x.json()).catch(() => ({}));
+  $('badge').textContent = r.connected ? 'Conectada' : 'Desconectada';
+  $('badge').className = r.connected ? 'badge on' : 'badge';
+  $('info').textContent = r.connected ? `Serial: ${r.serial}  |  Firmware: ${r.fw}` : '';
+  $('info').classList.toggle('hidden', !r.connected); $('btn').disabled = !r.connected;
+}, 1500);
+
+$('f').onsubmit = async e => {
+  e.preventDefault(); busy = true; $('btn').disabled = true; $('res').classList.add('hidden'); $('err').classList.add('hidden');
+  const r = await fetch('/eventbrite-otp', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({bms:$('bms').value, slot:+$('slot').value})}), d = await r.json();
+  if (r.ok) { $('res').classList.remove('hidden'); $('cPath').textContent = d.csv; $('oSer').textContent = d.serial; $('oPriv').textContent = d.private_id; $('oSec').textContent = d.secret_key; $('bms').value = ''; }
+  else { $('err').classList.remove('hidden'); $('err').textContent = '✖ ' + d.detail; }
+  busy = false;
+};
+
+async function runChat(m) {
+  if (!$('key').value) return alert('Ingresa tu Gemini API Key arriba a la derecha.');
+  busy = true; $('cbtn').disabled = true;
+  $('chat').innerHTML += `<div class="msg usr">${m}</div>`;
+  $('chat').scrollTop = $('chat').scrollHeight;
+  const r = await fetch('/agent', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({msg:m, key:$('key').value})}), d = await r.json();
+  $('chat').innerHTML += `<div class="msg bot">${r.ok ? d.reply : '✖ '+d.detail}</div>`;
+  $('chat').scrollTop = $('chat').scrollHeight; busy = false; $('cbtn').disabled = false;
+}
+
+async function sendPreset(text) {
+  if (busy) return;
+  busy = true; $('cbtn').disabled = true;
+  $('chat').innerHTML += `<div class="msg usr">${text}</div>`;
+  $('chat').scrollTop = $('chat').scrollHeight;
+  const r = await fetch('/reset-fido2', {method:'POST'}), d = await r.json();
+  $('chat').innerHTML += `<div class="msg bot">${r.ok ? d.reply : d.detail}</div>`;
+  $('chat').scrollTop = $('chat').scrollHeight; busy = false; $('cbtn').disabled = false;
+}
+
+$('cf').onsubmit = e => { e.preventDefault(); const m = $('cin').value; $('cin').value = ''; runChat(m); };
+</script>
+</body>
+</html>

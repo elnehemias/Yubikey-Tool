@@ -1,0 +1,11 @@
+Las librerías necesarias son:
+
+fastapi
+uvicorn
+openpyxl
+google-genai
+yubikey-manager, que instala el comando ykman que usa la app
+
+Se instalan con pip install -r install.txt.
+
+Para ejecutarla, deja app.py, index.html e iniciar.bat en la misma carpeta, conecta la YubiKey y haz doble clic en iniciar.bat. El .bat pide permisos de Administrador y abre el navegador en http://127.0.0.1:8000.
