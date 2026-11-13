@@ -130,6 +130,6 @@ SOLUCION DE PROBLEMAS
   - Sin permisos / errores al hablar con la llave: ejecuta la app
       como Administrador.
   - Si un error menciona "pip" no encontrado:
-      python -m pip install -r requirements.txt
+      python -m pip install -r install.txt
 
 ==========================================================
